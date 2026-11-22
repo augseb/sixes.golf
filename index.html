@@ -72,7 +72,7 @@ var KEY='sixes.key',enc=null,busy=false;
 if('serviceWorker' in navigator)try{navigator.serviceWorker.register('sw.js')}catch(e){}
 function b64(a){return btoa(String.fromCharCode.apply(null,new Uint8Array(a)))}
 function unb64(s){var t=atob(s),u=new Uint8Array(t.length);for(var i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u.buffer}
-function blob(){if(enc)return Promise.resolve(enc);return fetch('app.enc').then(function(r){if(!r.ok)throw new Error('no app');return r.arrayBuffer()}).then(function(a){enc=a;return a})}
+function blob(){if(enc)return Promise.resolve(enc);return fetch('app.enc',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('no app');return r.arrayBuffer()}).then(function(a){enc=a;return a})}
 function parts(a){var u=new Uint8Array(a);if(String.fromCharCode(u[0],u[1],u[2],u[3])!=='SXG1')throw new Error('bad file');return{salt:u.slice(4,20),nonce:u.slice(20,32),ct:u.slice(32)}}
 function keyFromCode(code,salt){var s=window.crypto.subtle;return s.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveKey']).then(function(k){return s.deriveKey({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},true,['decrypt'])})}
 function open(key,p){return window.crypto.subtle.decrypt({name:'AES-GCM',iv:p.nonce,additionalData:new TextEncoder().encode('SXG1')},key,p.ct).then(function(pt){return new TextDecoder().decode(pt)})}
@@ -85,7 +85,7 @@ var saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}
 if(saved&&window.crypto&&window.crypto.subtle){blob().then(function(a){var p=parts(a);return window.crypto.subtle.importKey('raw',unb64(saved),{name:'AES-GCM'},true,['decrypt']).then(function(k){return open(k,p)})}).then(boot).catch(function(){try{localStorage.removeItem(KEY)}catch(e){}show()})}
 else show();
 c.addEventListener('input',function(){b.disabled=!c.value.trim()||busy;m.classList.remove('on')});
-f.addEventListener('submit',function(e){e.preventDefault();if(busy)return;var code=c.value.trim().toLowerCase();if(!code)return;busy=true;b.disabled=true;b.textContent='One sec…';
+f.addEventListener('submit',function(e){e.preventDefault();if(busy)return;var code=c.value.trim().toLowerCase().replace(/\s+/g,' ');if(!code)return;busy=true;b.disabled=true;b.textContent='One sec…';
  if(!(window.crypto&&window.crypto.subtle)){m.textContent='This browser can’t open the beta. Try Safari or Chrome.';m.classList.add('on');busy=false;return}
  blob().then(function(a){var p=parts(a);return keyFromCode(code,p.salt).then(function(k){return open(k,p).then(function(html){return remember(k).then(function(){boot(html)})})})}).catch(function(err){if(err&&/no app|bad file|Failed to fetch|NetworkError/.test(String(err))){m.textContent='No signal. The first open needs one.';m.classList.add('on');busy=false;b.disabled=false;b.textContent='Tee It Up';return}m.textContent='Not that one.';miss()})});
 })();</script>

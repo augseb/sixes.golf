@@ -1,12 +1,16 @@
-// $IXES.golf offline cache. Beta 3.1. A new version of this file is a new cache: the next open after that installs it, the one after shows it.
-const V = 'sixes-3.1-1';
+// $IXES.golf offline cache. Bump V at every publish.
+const V = 'sixes-3.1-2';
 const FILES = ['./', 'index.html', 'app.enc', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'icon-1024.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
-  const u = new URL(e.request.url); if (u.origin !== location.origin || e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => {
-    const net = fetch(e.request).then(res => { if (res && res.ok) caches.open(V).then(c => c.put(e.request, res.clone())); return res; }).catch(() => hit);
-    return hit || net;
-  }));
+  const req = e.request; if (req.method !== 'GET') return;
+  const u = new URL(req.url); if (u.origin !== location.origin) return;
+  const shell = u.pathname.endsWith('/') || /\/(index\.html|app\.enc|sw\.js)$/.test(u.pathname);
+  if (shell) {   // the page and the locked app: the network first, so a publish lands at once. The cache only with no signal.
+    e.respondWith(fetch(req, { cache: 'no-store' }).then(r => { if (r.ok) { const cp = r.clone(); caches.open(V).then(c => c.put(req, cp)); } return r; })
+      .catch(() => caches.match(req, { ignoreSearch: true })));
+    return;
+  }
+  e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(V).then(c => c.put(req, cp)); } return r; })));
 });
