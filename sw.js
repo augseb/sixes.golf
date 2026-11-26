@@ -1,5 +1,5 @@
 // SIXES.golf offline cache. Bump V at every publish.
-const V = 'sixes-3.3.8.3-1';
+const V = 'sixes-3.4-1';
 const FILES = ['./', 'index.html', 'app.enc', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'icon-1024.png', 'favicon-32.png', 'favicon-64.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
